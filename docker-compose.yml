@@ -1,0 +1,29 @@
+version: '3.10'
+
+services:
+  db:
+    image: postgis/postgis:14-3.3
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: event_manager_db
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  web:
+    build:
+      context: .
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - "8000:8000"
+    command: python manage.py runserver 0.0.0.0:8000
+    depends_on:
+      - db
+      - redis
