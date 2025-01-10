@@ -1,68 +1,86 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
 from django.db import models
-#from django.contrib.gis.db import models as geomodels
-from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.models import User
 
-# Extending the default User model using a OneToOneField
+
+# Extending the default User model with additional fields like bio and profile picture
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    bio = models.TextField(null=True, blank=True)
-    profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE)
+    bio = models.TextField(blank=True)
+    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
 
     def __str__(self):
         return self.user.username
 
 
-# Tag Model
+# Tag Model for categorizing events
 class Tag(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
 
 
-# Event Model
+# Event Model with various fields, relationships, and custom manager
 class Event(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField()
-  #  location = geomodels.PointField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     is_public = models.BooleanField(default=True)
-    host = models.ForeignKey(User, related_name='events_hosted', on_delete=models.CASCADE)
-    participants = models.ManyToManyField(User, related_name='events_participated', through='EventParticipant')
+
+    # Relationships
+    host = models.ForeignKey('auth.User', related_name='hosted_events', on_delete=models.CASCADE)
+    participants = models.ManyToManyField('auth.User', related_name='participated_events')
     tags = models.ManyToManyField(Tag, related_name='events')
-    
+
     def __str__(self):
         return self.title
 
-    # Custom Manager to filter events by location and time
+    # Custom manager to fetch active events
     class EventManager(models.Manager):
-       # def get_by_location(self, point, distance):
-        #    return self.filter(location__distance_lte=(point, distance))
+        def active_events(self):
+            return self.filter(is_public=True, start_time__gte=models.functions.Now())
 
-        def get_by_date_range(self, start_date, end_date):
-            return self.filter(start_time__gte=start_date, end_time__lte=end_date)
-
+    # Assigning the custom manager
     objects = EventManager()
 
+    # Custom QuerySet method to get upcoming events for a user
+    @staticmethod
+    def get_upcoming_events_for_user(user):
+        return Event.objects.filter(participants=user, start_time__gte=models.functions.Now())
 
-# EventParticipant Model (to store many-to-many relationships for participants)
 class EventParticipant(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    event = models.ForeignKey('Event', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    invited = models.BooleanField(default=True)
+    joined_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.user.username} in {self.event.title}'
+        return f'{self.user.username} in {self.event.name}'
 
-
-# Comment Model
+# Comment Model for users to leave comments on events
 class Comment(models.Model):
-    user = models.ForeignKey(User, related_name='comments', on_delete=models.CASCADE)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     event = models.ForeignKey(Event, related_name='comments', on_delete=models.CASCADE)
-    text = models.TextField()
+    content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'Comment by {self.user.username} on {self.event.title}'
+        return f"Comment by {self.user.username} on {self.event.title}"
+
+
+# Signal to notify participants when a new event is created
+@receiver(post_save, sender=Event)
+def notify_participants(sender, instance, created, **kwargs):
+    if created:
+        for participant in instance.participants.all():
+            send_mail(
+                subject=f"New Event: {instance.title}",
+                message=f"Hey {participant.username}, a new event '{instance.title}' has been created!",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[participant.email]
+            )

@@ -1,0 +1,11 @@
+<!-- templates/events/event_list.html -->
+{% load static %}
+<h1>Events List</h1>
+
+<ul>
+    {% for event in events %}
+    <li>{{ event.title }} - {{ event.start_time }} to {{ event.end_time }}</li>
+    {% endfor %}
+</ul>
+
+<a href="{% url 'create_event' %}">Create a New Event</a>
