@@ -14,7 +14,7 @@ from django.contrib.auth.views import LoginView
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserChangeForm
-
+from .forms import ProfileUpdateForm
 
 # Regular Views to render HTML pages
 
@@ -54,6 +54,17 @@ def user_profile(request):
         form = UserChangeForm(instance=request.user)  # Pre-populate the form with the user's current data
     
     return render(request, 'profile/user_profile.html', {'form': form})
+
+def update_profile(request):
+    if request.method == 'POST':
+        form = ProfileUpdateForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect('profile')  # Replace 'profile' with your desired redirect URL
+    else:
+        form = ProfileUpdateForm(instance=request.user)
+    return render(request, 'user_profile.html', {'form': form})
+
 
 # Profile Success View (After profile creation)
 def profile_success(request):
