@@ -31,7 +31,7 @@ class EventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['id', 'title', 'description', 'location', 'start_time', 'end_time', 'is_public', 'host', 'participants', 'tags']
+        fields = ['id', 'title', 'description', 'start_time', 'end_time', 'is_public', 'host', 'participants', 'tags']
 
 
 # Comment Serializer
@@ -40,7 +40,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['id', 'user', 'text', 'created_at']
+        fields = ['id', 'user', 'event_id', 'content', 'created_at']
 
 
 # Event Detail Serializer (for nested event detail including participants and host)

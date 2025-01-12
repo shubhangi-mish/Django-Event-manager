@@ -12,7 +12,7 @@ RUN apt-get update &&\
 COPY requirements.txt ./
 
 # Install Python dependencies from requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt 
 
 # Copy the rest of the application code into the container
 COPY . .

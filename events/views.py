@@ -14,9 +14,9 @@ from django.contrib.auth.views import LoginView
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserChangeForm
+from rest_framework import serializers  
 from .forms import ProfileUpdateForm
 
-# Regular Views to render HTML pages
 
 # Home view (Landing Page)
 def home(request):
@@ -87,7 +87,7 @@ class TokenObtainPairView(APIView):
 
 # Event ViewSet (CRUD operations)
 class EventViewSet(viewsets.ModelViewSet):
-    queryset = Event.objects.all()
+    queryset = Event.objects.all().order_by('start_time')  
     serializer_class = EventDetailSerializer
     permission_classes = [IsAuthenticated]
 
@@ -99,13 +99,24 @@ class EventViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticated(), permissions.IsOwner]
         return [permissions.IsAuthenticated()]
 
+from rest_framework.pagination import CursorPagination  
+
+class CommentCursorPagination(CursorPagination):  
+    page_size = 10  # Adjust as needed  
+    ordering = '-created_at'  # Use the correct field name  
 
 # Comment ViewSet (CRUD operations)
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        event = Event.objects.get(id=self.kwargs['event_id'])
-        serializer.save(user=self.request.user, event=event)
+class CommentViewSet(viewsets.ModelViewSet):  
+    queryset = Comment.objects.all()  
+    serializer_class = CommentSerializer  
+    permission_classes = [IsAuthenticated]  
+    pagination_class = CommentCursorPagination   
+  
+    def perform_create(self, serializer):  
+        event_id = self.request.data.get('event_id')  
+        if not event_id:  
+            raise serializers.ValidationError({'event_id': 'This field is required.'})  
+        try:  
+            event = Event.objects.get(id=event_id)  
+        except Event.DoesNotExist:  
+            raise serializers.ValidationError({'event_id': 'Invalid event ID.'})  

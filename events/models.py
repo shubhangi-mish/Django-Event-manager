@@ -5,7 +5,7 @@ from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.models import User
-
+from django.utils import timezone  # Add this import at the top  
 
 # Extending the default User model with additional fields like bio and profile picture
 class Profile(models.Model):
@@ -25,34 +25,36 @@ class Tag(models.Model):
         return self.name
 
 
-# Event Model with various fields, relationships, and custom manager
-class Event(models.Model):
-    title = models.CharField(max_length=255)
-    description = models.TextField()
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    is_public = models.BooleanField(default=True)
 
-    # Relationships
-    host = models.ForeignKey('auth.User', related_name='hosted_events', on_delete=models.CASCADE)
-    participants = models.ManyToManyField('auth.User', related_name='participated_events')
-    tags = models.ManyToManyField(Tag, related_name='events')
-
-    def __str__(self):
-        return self.title
-
-    # Custom manager to fetch active events
-    class EventManager(models.Manager):
-        def active_events(self):
-            return self.filter(is_public=True, start_time__gte=models.functions.Now())
-
-    # Assigning the custom manager
-    objects = EventManager()
-
-    # Custom QuerySet method to get upcoming events for a user
-    @staticmethod
-    def get_upcoming_events_for_user(user):
-        return Event.objects.filter(participants=user, start_time__gte=models.functions.Now())
+  
+class Event(models.Model):  
+    title = models.CharField(max_length=255)  
+    description = models.TextField()  
+    start_time = models.DateTimeField()  
+    end_time = models.DateTimeField()  
+    is_public = models.BooleanField(default=True)  
+    created = models.DateTimeField(auto_now_add=True)  # Add this field  
+  
+    # Relationships  
+    host = models.ForeignKey('auth.User', related_name='hosted_events', on_delete=models.CASCADE)  
+    participants = models.ManyToManyField('auth.User', related_name='participated_events')  
+    tags = models.ManyToManyField(Tag, related_name='events')  
+  
+    def __str__(self):  
+        return self.title  
+  
+    # Custom manager to fetch active events  
+    class EventManager(models.Manager):  
+        def active_events(self):  
+            return self.filter(is_public=True, start_time__gte=timezone.now())  
+  
+    # Assigning the custom manager  
+    objects = EventManager()  
+  
+    # Custom QuerySet method to get upcoming events for a user  
+    @staticmethod  
+    def get_upcoming_events_for_user(user):  
+        return Event.objects.filter(participants=user, start_time__gte=timezone.now())  
 
 class EventParticipant(models.Model):
     event = models.ForeignKey('Event', on_delete=models.CASCADE)
