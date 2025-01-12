@@ -1,25 +1,18 @@
-"""
-ASGI config for event_manager project.
-
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://channels.readthedocs.io/en/stable/deployment/asgi.html
-"""
-
-import os
-from django.core.asgi import get_asgi_application
-from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
-from app.routing import websocket_urlpatterns  # import WebSocket URLs
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'event_manager.settings')
-
-application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
-    "websocket": AuthMiddlewareStack(
-        URLRouter(
-            websocket_urlpatterns  # WebSocket routing
-        )
-    ),
-})
+# app/asgi.py  
+  
+import os  
+from channels.routing import ProtocolTypeRouter, URLRouter  
+from django.core.asgi import get_asgi_application  
+from channels.auth import AuthMiddlewareStack  
+from app.routing import websocket_urlpatterns  # Ensure correct path to routing file  
+  
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')  
+  
+application = ProtocolTypeRouter({  
+    "http": get_asgi_application(),  
+    "websocket": AuthMiddlewareStack(  
+        URLRouter(  
+            websocket_urlpatterns  
+        )  
+    ),  
+})  
